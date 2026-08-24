@@ -1,0 +1,5 @@
+# iOS repository ownership.
+
+/ios/       @guoxl
+/.gitignore @guoxl
+/.github/  @guoxl
