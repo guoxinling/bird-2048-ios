@@ -452,6 +452,39 @@ struct GameViewModelTests {
         #expect(recorder.effects == [.move])
     }
 
+    @Test
+    func debugPreviewBoardShowsEveryBirdLevelOnce() {
+        #expect(GameViewModel.debugBirdPreviewBoard.cells == [
+            [2, 4, 8, 16],
+            [32, 64, 128, 256],
+            [512, 1024, 2048, 0],
+            [0, 0, 0, 0]
+        ])
+    }
+
+    @Test
+    func loadDebugBirdPreviewBoardResetsTransientState() {
+        let game = GameBoard(cells: [
+            [2048, 4, 0, 0],
+            [2, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults(), feedback: GameFeedback(record: { _ in }))
+
+        _ = viewModel.continueAfterWin()
+        viewModel.move(direction: .right)
+        viewModel.loadDebugBirdPreviewBoard()
+
+        #expect(viewModel.board == GameViewModel.debugBirdPreviewBoard.cells)
+        #expect(viewModel.score == 0)
+        #expect(viewModel.remainingRevives == 3)
+        #expect(!viewModel.canUndo)
+        #expect(viewModel.didContinueAfterWin)
+        #expect(!viewModel.isChoosingReviveTile)
+        #expect(!viewModel.showsStatusOverlay)
+    }
+
     private func makeDefaults() -> UserDefaults {
         let suiteName = "Bird2048Tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

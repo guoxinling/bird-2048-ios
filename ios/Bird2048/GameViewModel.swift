@@ -121,6 +121,26 @@ final class GameViewModel {
         saveGame()
     }
 
+#if DEBUG
+    static let debugBirdPreviewBoard = GameBoard(cells: [
+        [2, 4, 8, 16],
+        [32, 64, 128, 256],
+        [512, 1024, 2048, 0],
+        [0, 0, 0, 0]
+    ])
+
+    func loadDebugBirdPreviewBoard() {
+        game = Self.debugBirdPreviewBoard
+        remainingRevives = 3
+        isChoosingReviveTile = false
+        didContinueAfterWin = true
+        animatedTileKeys = []
+        animationTurn += 1
+        undoSnapshot = nil
+        saveGame()
+    }
+#endif
+
     @discardableResult
     func continueAfterWin() -> Bool {
         guard hasWon, !didContinueAfterWin else {

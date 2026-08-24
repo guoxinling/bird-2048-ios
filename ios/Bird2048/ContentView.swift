@@ -77,6 +77,18 @@ struct ContentView: View {
                         Spacer(minLength: max(34, proxy.size.height * 0.045))
                     }
                     .frame(width: contentWidth)
+                    .overlay(alignment: .topTrailing) {
+                        #if DEBUG
+                        Button {
+                            viewModel.loadDebugBirdPreviewBoard()
+                        } label: {
+                            Label("素材", systemImage: "photo.on.rectangle")
+                                .labelStyle(.iconOnly)
+                        }
+                        .buttonStyle(DebugPreviewButtonStyle())
+                        .padding(.top, max(18, proxy.size.height * 0.065) - 6)
+                        #endif
+                    }
 
                     Spacer(minLength: 0)
                 }
@@ -94,41 +106,38 @@ struct ContentView: View {
     }
 }
 
+#if DEBUG
+private struct DebugPreviewButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .heavy, design: .rounded))
+            .foregroundStyle(.white)
+            .frame(width: 34, height: 34)
+            .background {
+                Circle()
+                    .fill(GameTheme.ink.opacity(configuration.isPressed ? 0.48 : 0.64))
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.74), lineWidth: 1)
+                    }
+                    .shadow(color: GameTheme.coolShadow, radius: 8, y: 4)
+            }
+            .scaleEffect(configuration.isPressed ? 0.94 : 1)
+    }
+}
+#endif
+
 private struct HeaderView: View {
     let score: Int
     let highScore: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .bottom, spacing: 12) {
-                Text("合合小鸟")
-                    .font(.system(size: 42, weight: .black, design: .rounded))
-                    .foregroundStyle(GameTheme.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.64)
-                    .shadow(color: .white.opacity(0.92), radius: 0, x: 0, y: 2)
-                    .shadow(color: .white.opacity(0.86), radius: 0, x: 2, y: 0)
-                    .shadow(color: .white.opacity(0.86), radius: 0, x: -2, y: 0)
-                    .shadow(color: .white.opacity(0.78), radius: 8, x: 0, y: 5)
-
-                Spacer(minLength: 8)
-
-                Text("2048")
-                    .font(.system(size: 19, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 15)
-                    .padding(.vertical, 7)
-                    .background {
-                        Capsule()
-                            .fill(GameTheme.accent)
-                            .overlay {
-                                Capsule()
-                                    .stroke(.white.opacity(0.62), lineWidth: 1)
-                            }
-                            .shadow(color: GameTheme.accent.opacity(0.24), radius: 8, y: 4)
-                    }
-            }
-            .frame(maxWidth: .infinity)
+        VStack(alignment: .center, spacing: 14) {
+            Image("game_title")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 318, maxHeight: 106)
+                .accessibilityLabel("合合小鸟")
 
             HStack(spacing: 10) {
                 ScorePill(title: "分数", value: score)
@@ -397,37 +406,20 @@ private struct TileView: View {
                 }
 
             if let birdLevel {
-                VStack(spacing: 2) {
-                    Image(birdLevel.imageName)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(.horizontal, 8)
-                        .padding(.top, 6)
-
-                    Text(birdLevel.displayName)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(GameTheme.steel)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.58)
-                        .padding(.horizontal, 3)
-                        .padding(.bottom, 5)
-                }
+                Image(birdLevel.imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.horizontal, 0)
+                    .padding(.top, 7)
+                    .padding(.bottom, 17)
+                    .offset(y: 5)
 
                 VStack {
-                    HStack {
-                        Text("\(value)")
-                            .font(.system(size: 12, weight: .black, design: .rounded))
-                            .foregroundStyle(birdLevel.isFinalLevel ? .white : GameTheme.steel)
-                            .frame(width: 25, height: 25)
-                            .background {
-                                Circle()
-                                    .fill(birdLevel.isFinalLevel ? GameTheme.accent : .white.opacity(0.78))
-                            }
-                        Spacer(minLength: 0)
-                    }
                     Spacer(minLength: 0)
+                    TileValueBadge(value: value, isFinalLevel: birdLevel.isFinalLevel)
+                        .padding(.horizontal, 7)
+                        .padding(.bottom, 1)
                 }
-                .padding(5)
             }
         }
         .aspectRatio(1, contentMode: .fit)
@@ -448,6 +440,33 @@ private struct TileView: View {
 
     private func tileBackground(for birdLevel: BirdLevel?) -> Color {
         birdLevel?.backgroundColor ?? GameTheme.emptyTile
+    }
+}
+
+private struct TileValueBadge: View {
+    let value: Int
+    let isFinalLevel: Bool
+
+    var body: some View {
+        Text("\(value)")
+            .font(.system(size: fontSize, weight: .black, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+            .monospacedDigit()
+            .foregroundStyle(isFinalLevel ? GameTheme.accent : GameTheme.steel)
+            .frame(maxWidth: .infinity, minHeight: 20)
+            .shadow(color: .white.opacity(0.95), radius: 0, x: 0, y: 1)
+            .shadow(color: .white.opacity(0.85), radius: 0, x: 1, y: 0)
+            .shadow(color: .white.opacity(0.85), radius: 0, x: -1, y: 0)
+            .shadow(color: .white.opacity(0.52), radius: 4, x: 0, y: 2)
+    }
+
+    private var digitCount: Int {
+        String(value).count
+    }
+
+    private var fontSize: CGFloat {
+        digitCount >= 4 ? 12 : 13
     }
 }
 
