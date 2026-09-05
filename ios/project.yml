@@ -8,17 +8,26 @@ settings:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
+packages:
+  GoogleMobileAds:
+    url: git@github.com:googleads/swift-package-manager-google-mobile-ads.git
+    from: 12.0.0
 targets:
   Bird2048:
     type: application
     platform: iOS
     sources:
       - path: Bird2048
+    dependencies:
+      - package: GoogleMobileAds
+        product: GoogleMobileAds
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.guoxinling.bird2048
         INFOPLIST_FILE: Bird2048/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 6UYTZXY3H9
     scheme:
       testTargets:
         - Bird2048Tests

@@ -1,10 +1,23 @@
 import Foundation
 
+enum RewardedGameAction: Equatable {
+    case undo
+    case revive
+}
+
+enum RewardedActionResult: Equatable {
+    case performed
+    case requiresAd(RewardedGameAction)
+    case unavailable
+}
+
 @Observable
 final class GameViewModel {
     static let highScoreStorageKey = "highScore"
     static let savedGameStorageKey = "savedGame"
     static let feedbackEnabledStorageKey = "feedbackEnabled"
+    static let soundEnabledStorageKey = "soundEnabled"
+    static let freeUndosPerGame = 1
 
     private let defaults: UserDefaults
     private let feedback: GameFeedback
@@ -12,9 +25,11 @@ final class GameViewModel {
     private(set) var game: GameBoard
     private(set) var highScore: Int
     private(set) var remainingRevives = 3
+    private(set) var remainingFreeUndos = freeUndosPerGame
     private(set) var isChoosingReviveTile = false
     private(set) var didContinueAfterWin = false
     private(set) var isFeedbackEnabled: Bool
+    private(set) var isSoundEnabled: Bool
     private(set) var animatedTileKeys: Set<String> = []
     private(set) var animationTurn = 0
     private var undoSnapshot: GameSnapshot?
@@ -32,8 +47,10 @@ final class GameViewModel {
         self.game = game ?? savedGame?.game ?? GameBoard.newGame()
         highScore = defaults.integer(forKey: Self.highScoreStorageKey)
         remainingRevives = savedGame?.remainingRevives ?? 3
+        remainingFreeUndos = savedGame?.remainingFreeUndos ?? Self.freeUndosPerGame
         didContinueAfterWin = savedGame?.didContinueAfterWin ?? false
         isFeedbackEnabled = defaults.object(forKey: Self.feedbackEnabledStorageKey) as? Bool ?? true
+        isSoundEnabled = defaults.object(forKey: Self.soundEnabledStorageKey) as? Bool ?? true
     }
 
     var board: [[Int]] {
@@ -62,11 +79,11 @@ final class GameViewModel {
 
     var statusTitle: String {
         if hasWon {
-            return "进化完成"
+            return "Evolution Complete"
         }
 
         if isGameOver {
-            return "游戏结束"
+            return "Game Over"
         }
 
         return ""
@@ -74,18 +91,18 @@ final class GameViewModel {
 
     var statusText: String {
         if isChoosingReviveTile {
-            return "选择一个方块移除"
+            return "Choose one tile to remove"
         }
 
         if hasWon {
-            return didContinueAfterWin ? "继续挑战" : "小鸟之王诞生"
+            return didContinueAfterWin ? "Keep Going" : "The Bird King Has Arrived"
         }
 
         if isGameOver {
-            return "游戏结束"
+            return "Game Over"
         }
 
-        return "滑动合并小鸟"
+        return "Swipe to merge birds"
     }
 
     func move(direction: Direction) {
@@ -113,6 +130,7 @@ final class GameViewModel {
     func restart() {
         game = GameBoard.newGame()
         remainingRevives = 3
+        remainingFreeUndos = Self.freeUndosPerGame
         isChoosingReviveTile = false
         didContinueAfterWin = false
         animatedTileKeys = []
@@ -132,6 +150,7 @@ final class GameViewModel {
     func loadDebugBirdPreviewBoard() {
         game = Self.debugBirdPreviewBoard
         remainingRevives = 3
+        remainingFreeUndos = Self.freeUndosPerGame
         isChoosingReviveTile = false
         didContinueAfterWin = true
         animatedTileKeys = []
@@ -157,6 +176,11 @@ final class GameViewModel {
         defaults.set(isEnabled, forKey: Self.feedbackEnabledStorageKey)
     }
 
+    func setSoundEnabled(_ isEnabled: Bool) {
+        isSoundEnabled = isEnabled
+        defaults.set(isEnabled, forKey: Self.soundEnabledStorageKey)
+    }
+
     @discardableResult
     func activateReviveMode() -> Bool {
         guard isGameOver, remainingRevives > 0 else {
@@ -165,6 +189,20 @@ final class GameViewModel {
 
         isChoosingReviveTile = true
         return true
+    }
+
+    @discardableResult
+    func requestReviveMode() -> RewardedActionResult {
+        guard isGameOver, remainingRevives > 0 else {
+            return .unavailable
+        }
+
+        return .requiresAd(.revive)
+    }
+
+    @discardableResult
+    func performRewardedRevive() -> Bool {
+        activateReviveMode()
     }
 
     @discardableResult
@@ -199,6 +237,31 @@ final class GameViewModel {
     }
 
     @discardableResult
+    func requestUndo() -> RewardedActionResult {
+        guard canUndo else {
+            return .unavailable
+        }
+
+        guard remainingFreeUndos > 0 else {
+            return .requiresAd(.undo)
+        }
+
+        let remainingAfterUndo = remainingFreeUndos - 1
+        guard undo() else {
+            return .unavailable
+        }
+
+        remainingFreeUndos = remainingAfterUndo
+        saveGame()
+        return .performed
+    }
+
+    @discardableResult
+    func performRewardedUndo() -> Bool {
+        undo()
+    }
+
+    @discardableResult
     func undo() -> Bool {
         guard let snapshot = undoSnapshot else {
             return false
@@ -206,6 +269,7 @@ final class GameViewModel {
 
         game = snapshot.game
         remainingRevives = snapshot.remainingRevives
+        remainingFreeUndos = snapshot.remainingFreeUndos
         isChoosingReviveTile = snapshot.isChoosingReviveTile
         didContinueAfterWin = snapshot.didContinueAfterWin
         animatedTileKeys = []
@@ -218,12 +282,14 @@ final class GameViewModel {
     static func saveGameForTesting(
         game: GameBoard,
         remainingRevives: Int,
+        remainingFreeUndos: Int = GameViewModel.freeUndosPerGame,
         didContinueAfterWin: Bool = false,
         defaults: UserDefaults
     ) throws {
         let savedGame = SavedGame(
             game: game,
             remainingRevives: remainingRevives,
+            remainingFreeUndos: remainingFreeUndos,
             didContinueAfterWin: didContinueAfterWin
         )
         let data = try JSONEncoder().encode(savedGame)
@@ -234,6 +300,7 @@ final class GameViewModel {
         try? Self.saveGameForTesting(
             game: game,
             remainingRevives: remainingRevives,
+            remainingFreeUndos: remainingFreeUndos,
             didContinueAfterWin: didContinueAfterWin,
             defaults: defaults
         )
@@ -243,6 +310,7 @@ final class GameViewModel {
         GameSnapshot(
             game: game,
             remainingRevives: remainingRevives,
+            remainingFreeUndos: remainingFreeUndos,
             isChoosingReviveTile: isChoosingReviveTile,
             didContinueAfterWin: didContinueAfterWin
         )
@@ -257,6 +325,10 @@ final class GameViewModel {
     }
 
     private func playSound(_ effect: SoundPlayer.Effect) {
+        guard isSoundEnabled else {
+            return
+        }
+
         soundPlayer?.play(effect)
     }
 
@@ -288,6 +360,7 @@ final class GameViewModel {
 private struct GameSnapshot {
     let game: GameBoard
     let remainingRevives: Int
+    let remainingFreeUndos: Int
     let isChoosingReviveTile: Bool
     let didContinueAfterWin: Bool
 }
@@ -295,11 +368,13 @@ private struct GameSnapshot {
 private struct SavedGame: Codable {
     let game: GameBoard
     let remainingRevives: Int
+    let remainingFreeUndos: Int
     let didContinueAfterWin: Bool
 
-    init(game: GameBoard, remainingRevives: Int, didContinueAfterWin: Bool) {
+    init(game: GameBoard, remainingRevives: Int, remainingFreeUndos: Int, didContinueAfterWin: Bool) {
         self.game = game
         self.remainingRevives = remainingRevives
+        self.remainingFreeUndos = remainingFreeUndos
         self.didContinueAfterWin = didContinueAfterWin
     }
 
@@ -307,6 +382,7 @@ private struct SavedGame: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         game = try container.decode(GameBoard.self, forKey: .game)
         remainingRevives = try container.decode(Int.self, forKey: .remainingRevives)
+        remainingFreeUndos = try container.decodeIfPresent(Int.self, forKey: .remainingFreeUndos) ?? GameViewModel.freeUndosPerGame
         didContinueAfterWin = try container.decodeIfPresent(Bool.self, forKey: .didContinueAfterWin) ?? false
     }
 }

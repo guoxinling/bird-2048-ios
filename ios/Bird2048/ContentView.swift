@@ -1,7 +1,19 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("appLanguage") private var languageRawValue = AppLanguage.english.rawValue
     @State private var viewModel: GameViewModel
+    @State private var rewardedAdManager = RewardedAdManager()
+    @State private var adErrorMessage: String?
+    @State private var showsSettings = false
+
+    private var language: AppLanguage {
+        AppLanguage(rawValue: languageRawValue) ?? .english
+    }
+
+    private var strings: GameStrings {
+        GameStrings(language: language)
+    }
 
     init() {
         _viewModel = State(initialValue: GameViewModel(soundPlayer: .live))
@@ -25,7 +37,7 @@ struct ContentView: View {
                     VStack(spacing: 16) {
                         Spacer(minLength: max(18, proxy.size.height * 0.065))
 
-                        HeaderView(score: viewModel.score, highScore: viewModel.highScore)
+                        HeaderView(score: viewModel.score, highScore: viewModel.highScore, strings: strings)
 
                         ZStack {
                             GameBoardView(
@@ -38,13 +50,16 @@ struct ContentView: View {
                             )
 
                             if viewModel.isChoosingReviveTile {
-                                VStack {
+                                VStack(spacing: 0) {
+                                    ReviveSelectionPrompt(text: strings.reviveSelectionPrompt)
+                                        .padding(.top, 16)
+
                                     Spacer()
 
                                     Button {
                                         _ = viewModel.cancelReviveMode()
                                     } label: {
-                                        Label("取消复活", systemImage: "xmark")
+                                        Label(strings.cancelRevive, systemImage: "xmark")
                                     }
                                     .buttonStyle(PrimaryGameButtonStyle(tint: GameTheme.ink.opacity(0.78)))
                                     .padding(.bottom, 18)
@@ -53,13 +68,14 @@ struct ContentView: View {
 
                             if viewModel.showsStatusOverlay {
                                 StatusOverlay(
-                                    title: viewModel.statusTitle,
+                                    title: strings.statusTitle(hasWon: viewModel.hasWon, isGameOver: viewModel.isGameOver),
                                     score: viewModel.score,
                                     canContinueAfterWin: viewModel.hasWon && !viewModel.didContinueAfterWin,
                                     canRevive: viewModel.isGameOver && viewModel.remainingRevives > 0,
                                     remainingRevives: viewModel.remainingRevives,
+                                    strings: strings,
                                     continueAfterWin: viewModel.continueAfterWin,
-                                    revive: viewModel.activateReviveMode,
+                                    revive: requestReviveMode,
                                     restart: viewModel.restart
                                 )
                             }
@@ -67,27 +83,32 @@ struct ContentView: View {
 
                         ControlBar(
                             canUndo: viewModel.canUndo,
-                            isFeedbackEnabled: viewModel.isFeedbackEnabled,
-                            statusText: viewModel.statusText,
+                            remainingFreeUndos: viewModel.remainingFreeUndos,
+                            statusText: strings.statusText(
+                                isChoosingReviveTile: viewModel.isChoosingReviveTile,
+                                hasWon: viewModel.hasWon,
+                                didContinueAfterWin: viewModel.didContinueAfterWin,
+                                isGameOver: viewModel.isGameOver
+                            ),
+                            strings: strings,
                             restart: viewModel.restart,
-                            undo: viewModel.undo,
-                            setFeedbackEnabled: viewModel.setFeedbackEnabled
+                            undo: requestUndo
                         )
 
                         Spacer(minLength: max(34, proxy.size.height * 0.045))
                     }
                     .frame(width: contentWidth)
                     .overlay(alignment: .topTrailing) {
-                        #if DEBUG
-                        Button {
-                            viewModel.loadDebugBirdPreviewBoard()
-                        } label: {
-                            Label("素材", systemImage: "photo.on.rectangle")
-                                .labelStyle(.iconOnly)
-                        }
-                        .buttonStyle(DebugPreviewButtonStyle())
+                        TopActionButtons(
+                            strings: strings,
+                            openSettings: { showsSettings = true },
+                            loadDebugPreview: {
+                                #if DEBUG
+                                viewModel.loadDebugBirdPreviewBoard()
+                                #endif
+                            }
+                        )
                         .padding(.top, max(18, proxy.size.height * 0.065) - 6)
-                        #endif
                     }
 
                     Spacer(minLength: 0)
@@ -103,11 +124,73 @@ struct ContentView: View {
                     viewModel.move(direction: Direction.fromDrag(value.translation))
                 }
         )
+        .sheet(isPresented: $showsSettings) {
+            SettingsSheet(
+                language: Binding(
+                    get: { language },
+                    set: { languageRawValue = $0.rawValue }
+                ),
+                strings: strings,
+                isFeedbackEnabled: viewModel.isFeedbackEnabled,
+                isSoundEnabled: viewModel.isSoundEnabled,
+                setFeedbackEnabled: viewModel.setFeedbackEnabled,
+                setSoundEnabled: viewModel.setSoundEnabled
+            )
+            .presentationDetents([.height(330)])
+            .presentationDragIndicator(.visible)
+        }
+        .alert(strings.adUnavailableTitle, isPresented: Binding(
+            get: { adErrorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    adErrorMessage = nil
+                }
+            }
+        )) {
+            Button(strings.ok, role: .cancel) {
+                adErrorMessage = nil
+            }
+        } message: {
+            Text(adErrorMessage ?? "")
+        }
+    }
+
+    private func requestUndo() {
+        handleRewardedResult(viewModel.requestUndo())
+    }
+
+    private func requestReviveMode() {
+        handleRewardedResult(viewModel.requestReviveMode())
+    }
+
+    private func handleRewardedResult(_ result: RewardedActionResult) {
+        switch result {
+        case .performed:
+            break
+        case .requiresAd(let action):
+            presentRewardedAd(for: action)
+        case .unavailable:
+            break
+        }
+    }
+
+    private func presentRewardedAd(for action: RewardedGameAction) {
+        let didStart = rewardedAdManager.presentRewardedAd {
+            switch action {
+            case .undo:
+                _ = viewModel.performRewardedUndo()
+            case .revive:
+                _ = viewModel.performRewardedRevive()
+            }
+        }
+
+        if !didStart {
+            adErrorMessage = strings.adUnavailableMessage
+        }
     }
 }
 
-#if DEBUG
-private struct DebugPreviewButtonStyle: ButtonStyle {
+private struct CircleIconButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 15, weight: .heavy, design: .rounded))
@@ -125,23 +208,188 @@ private struct DebugPreviewButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.94 : 1)
     }
 }
-#endif
+
+private struct TopActionButtons: View {
+    let strings: GameStrings
+    let openSettings: () -> Void
+    let loadDebugPreview: () -> Void
+
+    var body: some View {
+        VStack(spacing: 9) {
+            Button(action: openSettings) {
+                Label(strings.settings, systemImage: "gearshape.fill")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(CircleIconButtonStyle())
+            .accessibilityLabel(strings.settings)
+
+            #if DEBUG
+            Button(action: loadDebugPreview) {
+                Label(strings.assetPreview, systemImage: "photo.on.rectangle")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(CircleIconButtonStyle())
+            .accessibilityLabel(strings.assetPreview)
+            #endif
+        }
+    }
+}
+
+private struct SettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @Binding var language: AppLanguage
+    let strings: GameStrings
+    let isFeedbackEnabled: Bool
+    let isSoundEnabled: Bool
+    let setFeedbackEnabled: (Bool) -> Void
+    let setSoundEnabled: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack {
+                Text(strings.settings)
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(GameTheme.ink)
+
+                Spacer()
+
+                Button(strings.done) {
+                    dismiss()
+                }
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(GameTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(strings.languageLabel)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(GameTheme.steel)
+
+                LanguageSegmentedControl(selection: $language)
+            }
+
+            SettingsToggleRow(
+                title: strings.haptics,
+                systemImage: "iphone.radiowaves.left.and.right",
+                isOn: isFeedbackEnabled,
+                setValue: setFeedbackEnabled
+            )
+
+            SettingsToggleRow(
+                title: strings.sound,
+                systemImage: "speaker.wave.2.fill",
+                isOn: isSoundEnabled,
+                setValue: setSoundEnabled
+            )
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 26)
+        .padding(.bottom, 18)
+        .background(GameTheme.settingsBackground.ignoresSafeArea())
+        .environment(\.colorScheme, .light)
+    }
+}
+
+private struct LanguageSegmentedControl: View {
+    @Binding var selection: AppLanguage
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(AppLanguage.allCases) { language in
+                Button {
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
+                        selection = language
+                    }
+                } label: {
+                    Text(language.displayName)
+                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .foregroundStyle(selection == language ? GameTheme.ink : GameTheme.steel.opacity(0.74))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 44)
+                        .background {
+                            if selection == language {
+                                Capsule()
+                                    .fill(.white)
+                                    .shadow(color: GameTheme.coolShadow.opacity(1.45), radius: 8, y: 4)
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selection == language ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background {
+            Capsule()
+                .fill(Color(red: 0.84, green: 0.88, blue: 0.88))
+                .overlay {
+                    Capsule()
+                        .stroke(.white.opacity(0.58), lineWidth: 1)
+                }
+        }
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    let systemImage: String
+    let isOn: Bool
+    let setValue: (Bool) -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(GameTheme.accent)
+                .frame(width: 24)
+
+            Text(title)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(GameTheme.ink)
+
+            Spacer()
+
+            Toggle(title, isOn: Binding(
+                get: { isOn },
+                set: { setValue($0) }
+            ))
+            .labelsHidden()
+            .toggleStyle(.switch)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 58)
+        .background {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.white.opacity(0.74))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(.white.opacity(0.86), lineWidth: 1)
+                }
+        }
+    }
+}
 
 private struct HeaderView: View {
     let score: Int
     let highScore: Int
+    let strings: GameStrings
 
     var body: some View {
         VStack(alignment: .center, spacing: 14) {
-            Image("game_title")
+            Image(strings.titleImageName)
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: 318, maxHeight: 106)
-                .accessibilityLabel("合合小鸟")
+                .accessibilityLabel(strings.titleAccessibilityLabel)
 
             HStack(spacing: 10) {
-                ScorePill(title: "分数", value: score)
-                ScorePill(title: "最高分", value: highScore)
+                ScorePill(title: strings.score, value: score)
+                ScorePill(title: strings.bestScore, value: highScore)
             }
             .frame(maxWidth: .infinity)
         }
@@ -155,37 +403,46 @@ private struct StatusOverlay: View {
     let canContinueAfterWin: Bool
     let canRevive: Bool
     let remainingRevives: Int
+    let strings: GameStrings
     let continueAfterWin: () -> Bool
-    let revive: () -> Bool
+    let revive: () -> Void
     let restart: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
             Text(title)
                 .font(.system(size: 25, weight: .heavy, design: .rounded))
-            Text("分数 \(score.formatted())")
+            Text("\(strings.score) \(score.formatted())")
                 .font(.subheadline)
+
+            if canRevive {
+                Text(strings.reviveInfo)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(GameTheme.ink.opacity(0.78))
+                    .padding(.horizontal, 8)
+            }
 
             if canContinueAfterWin {
                 Button {
                     _ = continueAfterWin()
                 } label: {
-                    Label("继续挑战", systemImage: "play.fill")
+                    Label(strings.continueChallenge, systemImage: "play.fill")
                 }
                 .buttonStyle(PrimaryGameButtonStyle(tint: GameTheme.accent))
             }
 
             if canRevive {
                 Button {
-                    _ = revive()
+                    revive()
                 } label: {
-                    Label("移除方块复活 \(remainingRevives)", systemImage: "heart.fill")
+                    Label("\(strings.reviveButton) \(remainingRevives)", systemImage: "play.rectangle.fill")
                 }
                 .buttonStyle(PrimaryGameButtonStyle(tint: GameTheme.green))
             }
 
             Button(action: restart) {
-                Label("再来一次", systemImage: "arrow.clockwise")
+                Label(strings.tryAgain, systemImage: "arrow.clockwise")
             }
             .buttonStyle(SecondaryGameButtonStyle())
         }
@@ -198,6 +455,27 @@ private struct StatusOverlay: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(.white.opacity(0.72), lineWidth: 1)
         }
+    }
+}
+
+private struct ReviveSelectionPrompt: View {
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: "hand.tap.fill")
+            .font(.system(size: 16, weight: .heavy, design: .rounded))
+            .foregroundStyle(GameTheme.ink)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background {
+                Capsule()
+                    .fill(.white.opacity(0.9))
+                    .overlay {
+                        Capsule()
+                            .stroke(GameTheme.green.opacity(0.5), lineWidth: 1.2)
+                    }
+                    .shadow(color: GameTheme.coolShadow, radius: 10, y: 5)
+            }
     }
 }
 
@@ -231,47 +509,27 @@ private struct ScorePill: View {
 
 private struct ControlBar: View {
     let canUndo: Bool
-    let isFeedbackEnabled: Bool
+    let remainingFreeUndos: Int
     let statusText: String
+    let strings: GameStrings
     let restart: () -> Void
-    let undo: () -> Bool
-    let setFeedbackEnabled: (Bool) -> Void
+    let undo: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: 12) {
                 Button(action: restart) {
-                    Label("重开", systemImage: "arrow.clockwise")
+                    Label(strings.restart, systemImage: "arrow.clockwise")
                 }
                 .buttonStyle(PrimaryGameButtonStyle(tint: GameTheme.accent))
 
                 Button {
-                    _ = undo()
+                    undo()
                 } label: {
-                    Label("撤销", systemImage: "arrow.uturn.backward")
+                    Label(strings.undo, systemImage: remainingFreeUndos > 0 ? "arrow.uturn.backward" : "play.rectangle.fill")
                 }
                 .buttonStyle(SecondaryGameButtonStyle())
                 .disabled(!canUndo)
-
-                Toggle("触感", isOn: Binding(
-                    get: { isFeedbackEnabled },
-                    set: { setFeedbackEnabled($0) }
-                ))
-                .font(.system(size: 17, weight: .bold, design: .rounded))
-                .foregroundStyle(GameTheme.ink.opacity(0.82))
-                .toggleStyle(.switch)
-                .fixedSize()
-                .padding(.horizontal, 12)
-                .frame(height: 50)
-                .background {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(.white.opacity(0.82))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(.white.opacity(0.82), lineWidth: 1)
-                        }
-                        .shadow(color: GameTheme.coolShadow, radius: 8, y: 4)
-                }
             }
             .frame(maxWidth: .infinity)
 
@@ -477,6 +735,7 @@ private enum GameTheme {
     static let green = Color(red: 0.23, green: 0.72, blue: 0.54)
     static let glassCard = Color.white.opacity(0.66)
     static let glassPanel = Color.white.opacity(0.72)
+    static let settingsBackground = Color(red: 0.94, green: 0.97, blue: 0.96)
     static let boardBackground = Color(red: 0.90, green: 0.86, blue: 0.76).opacity(0.78)
     static let emptyTile = Color(red: 1.0, green: 0.98, blue: 0.93).opacity(0.90)
     static let tipText = Color(red: 0.55, green: 0.59, blue: 0.66)

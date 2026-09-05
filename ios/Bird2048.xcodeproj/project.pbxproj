@@ -8,15 +8,18 @@
 
 /* Begin PBXBuildFile section */
 		0A12F9D29A346C5D5976849E /* Bird2048App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 342D06B6A7FDC28D81BE62B1 /* Bird2048App.swift */; };
+		0B7478C48E0B16BF0188497C /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 5891456D26FD0AD8397E4413 /* GoogleMobileAds */; };
 		18E5B7A6BD22ABE31D6B78CB /* SoundPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22D52A52EAAC715C77540860 /* SoundPlayer.swift */; };
 		1EA552B4BD279463EFCA2901 /* BirdLevel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7882E4E26005B48B07D6CC13 /* BirdLevel.swift */; };
 		29246D8B55187ECD15F4E311 /* GameBoardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4ACB18EDBFCC8A1D0AC3FFE /* GameBoardTests.swift */; };
 		37F3895A76CF15CED5916E33 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539DC0C14AF2170D707C2B56 /* ContentView.swift */; };
+		47269529CCD8D348F762E816 /* RewardedAdManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3A430CF51CB91E7704D33C /* RewardedAdManager.swift */; };
 		598EEE6A5903FD31D2BC5A70 /* move.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 73841427DAA88606D30BAE4D /* move.mp3 */; };
 		7860041016805C599B42BCEB /* BirdLevelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01EF6B6AE5639043837B03E3 /* BirdLevelTests.swift */; };
 		AD247F4ECCE6DFE44093DCAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 631558D4FA064FA77B9730AD /* Assets.xcassets */; };
 		B09E643CF4036934BABB6088 /* merge.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 5DBD98C0C6555EB046C1A89A /* merge.mp3 */; };
 		D6B6D3C527A6541171FBB52A /* GameBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E843E6B4FA5D70AD5B6025C0 /* GameBoard.swift */; };
+		DA4C6C860E7D1E468EFC2425 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86BFA727CDCC72467B7F609E /* AppLanguage.swift */; };
 		E091A3D6BA129E9B3756836C /* GameViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9783221065628C51BFC88DA4 /* GameViewModelTests.swift */; };
 		E0D596954DEF6FE47A21C5F7 /* GameFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78346D2489AC8C23D16F918E /* GameFeedback.swift */; };
 		E9FBDD0812604B69D917F8DB /* GameViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D65593A3397567D8E11B95D6 /* GameViewModel.swift */; };
@@ -43,7 +46,9 @@
 		73841427DAA88606D30BAE4D /* move.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = move.mp3; sourceTree = "<group>"; };
 		78346D2489AC8C23D16F918E /* GameFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameFeedback.swift; sourceTree = "<group>"; };
 		7882E4E26005B48B07D6CC13 /* BirdLevel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BirdLevel.swift; sourceTree = "<group>"; };
+		86BFA727CDCC72467B7F609E /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
 		9783221065628C51BFC88DA4 /* GameViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModelTests.swift; sourceTree = "<group>"; };
+		9F3A430CF51CB91E7704D33C /* RewardedAdManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardedAdManager.swift; sourceTree = "<group>"; };
 		A4ACB18EDBFCC8A1D0AC3FFE /* GameBoardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameBoardTests.swift; sourceTree = "<group>"; };
 		D65593A3397567D8E11B95D6 /* GameViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewModel.swift; sourceTree = "<group>"; };
 		E16F61AF6A687D9C5D20D2DE /* Bird2048.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Bird2048.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,10 +57,22 @@
 		FAFF395119C31C8F71989A18 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		7820E525B914ED039FB46026 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B7478C48E0B16BF0188497C /* GoogleMobileAds in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		12EC1CE080ED75BCB4F8BDBF /* Bird2048 */ = {
 			isa = PBXGroup;
 			children = (
+				86BFA727CDCC72467B7F609E /* AppLanguage.swift */,
 				631558D4FA064FA77B9730AD /* Assets.xcassets */,
 				342D06B6A7FDC28D81BE62B1 /* Bird2048App.swift */,
 				7882E4E26005B48B07D6CC13 /* BirdLevel.swift */,
@@ -64,6 +81,7 @@
 				78346D2489AC8C23D16F918E /* GameFeedback.swift */,
 				D65593A3397567D8E11B95D6 /* GameViewModel.swift */,
 				FAFF395119C31C8F71989A18 /* Info.plist */,
+				9F3A430CF51CB91E7704D33C /* RewardedAdManager.swift */,
 				22D52A52EAAC715C77540860 /* SoundPlayer.swift */,
 				1F64C29223B0AA95237D8E28 /* Sounds */,
 			);
@@ -135,6 +153,7 @@
 			buildPhases = (
 				739502A6D1F7BB46B5C8C374 /* Sources */,
 				7098159C7CAE42289D865317 /* Resources */,
+				7820E525B914ED039FB46026 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -142,6 +161,7 @@
 			);
 			name = Bird2048;
 			packageProductDependencies = (
+				5891456D26FD0AD8397E4413 /* GoogleMobileAds */,
 			);
 			productName = Bird2048;
 			productReference = E16F61AF6A687D9C5D20D2DE /* Bird2048.app */;
@@ -156,6 +176,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					37C756D4D8B480CD2CE3970D = {
+						DevelopmentTeam = 6UYTZXY3H9;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 100403DE15F20D167BC294F3 /* Build configuration list for PBXProject "Bird2048" */;
@@ -167,6 +191,9 @@
 			);
 			mainGroup = E643A714E10BBD3C32079DB9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				505BCC6074F843C0231EA04B /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D846269D850D9AFD3EA3898D /* Products */;
 			projectDirPath = "";
@@ -206,12 +233,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DA4C6C860E7D1E468EFC2425 /* AppLanguage.swift in Sources */,
 				0A12F9D29A346C5D5976849E /* Bird2048App.swift in Sources */,
 				1EA552B4BD279463EFCA2901 /* BirdLevel.swift in Sources */,
 				37F3895A76CF15CED5916E33 /* ContentView.swift in Sources */,
 				D6B6D3C527A6541171FBB52A /* GameBoard.swift in Sources */,
 				E0D596954DEF6FE47A21C5F7 /* GameFeedback.swift in Sources */,
 				E9FBDD0812604B69D917F8DB /* GameViewModel.swift in Sources */,
+				47269529CCD8D348F762E816 /* RewardedAdManager.swift in Sources */,
 				18E5B7A6BD22ABE31D6B78CB /* SoundPlayer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -249,6 +278,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6UYTZXY3H9;
 				INFOPLIST_FILE = Bird2048/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -347,6 +378,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 6UYTZXY3H9;
 				INFOPLIST_FILE = Bird2048/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -447,6 +480,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		505BCC6074F843C0231EA04B /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "git@github.com:googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5891456D26FD0AD8397E4413 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 505BCC6074F843C0231EA04B /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0F2139B8AACFF179D3C26D1A /* Project object */;
 }

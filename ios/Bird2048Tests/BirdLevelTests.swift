@@ -5,9 +5,11 @@ struct BirdLevelTests {
     @Test
     func mapsTileValuesToBirdLevels() {
         #expect(BirdLevel(value: 2)?.imageName == "bird_level_2")
-        #expect(BirdLevel(value: 2)?.displayName == "小萌蛋")
+        #expect(BirdLevel(value: 2)?.displayName == "Tiny Egg")
+        #expect(BirdLevel(value: 2)?.displayName(language: .chinese) == "小萌蛋")
         #expect(BirdLevel(value: 2048)?.imageName == "bird_level_2048")
-        #expect(BirdLevel(value: 2048)?.displayName == "小鸟之王")
+        #expect(BirdLevel(value: 2048)?.displayName == "Bird King")
+        #expect(BirdLevel(value: 2048)?.displayName(language: .chinese) == "小鸟之王")
         #expect(BirdLevel(value: 2048)?.isFinalLevel == true)
     }
 

@@ -32,6 +32,17 @@ struct GameViewModelTests {
     }
 
     @Test
+    func persistsSoundSetting() {
+        let defaults = makeDefaults()
+        let viewModel = GameViewModel(defaults: defaults, feedback: GameFeedback(record: { _ in }))
+
+        viewModel.setSoundEnabled(false)
+        let restoredViewModel = GameViewModel(defaults: defaults, feedback: GameFeedback(record: { _ in }))
+
+        #expect(!restoredViewModel.isSoundEnabled)
+    }
+
+    @Test
     func restoresSavedGameFromStorage() throws {
         let defaults = makeDefaults()
         let savedGame = GameBoard(cells: [
@@ -135,6 +146,64 @@ struct GameViewModelTests {
     }
 
     @Test
+    func requestUndoUsesOneFreeUndoPerGame() {
+        let game = GameBoard(cells: [
+            [2, 0, 0, 0],
+            [4, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults(), feedback: GameFeedback(record: { _ in }))
+
+        viewModel.move(direction: .right)
+        let firstResult = viewModel.requestUndo()
+        viewModel.move(direction: .down)
+        let secondResult = viewModel.requestUndo()
+
+        #expect(firstResult == .performed)
+        #expect(secondResult == .requiresAd(.undo))
+        #expect(viewModel.remainingFreeUndos == 0)
+    }
+
+    @Test
+    func rewardedUndoRunsAfterFreeUndoIsUsed() {
+        let game = GameBoard(cells: [
+            [2, 0, 0, 0],
+            [4, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults(), feedback: GameFeedback(record: { _ in }))
+
+        viewModel.move(direction: .right)
+        _ = viewModel.requestUndo()
+        viewModel.move(direction: .down)
+        let beforeReward = viewModel.board
+        let rewarded = viewModel.performRewardedUndo()
+
+        #expect(rewarded)
+        #expect(viewModel.board != beforeReward)
+        #expect(!viewModel.canUndo)
+    }
+
+    @Test
+    func restartResetsFreeUndoAllowance() {
+        let game = GameBoard(cells: [
+            [2, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults(), feedback: GameFeedback(record: { _ in }))
+
+        viewModel.move(direction: .right)
+        _ = viewModel.requestUndo()
+        viewModel.restart()
+
+        #expect(viewModel.remainingFreeUndos == 1)
+    }
+
+    @Test
     func keepsStoredHighScoreWhenCurrentScoreIsLower() {
         let defaults = makeDefaults()
         defaults.set(64, forKey: GameViewModel.highScoreStorageKey)
@@ -164,7 +233,7 @@ struct GameViewModelTests {
 
         #expect(viewModel.isGameOver)
         #expect(viewModel.showsStatusOverlay)
-        #expect(viewModel.statusTitle == "游戏结束")
+        #expect(viewModel.statusTitle == "Game Over")
     }
 
     @Test
@@ -179,7 +248,7 @@ struct GameViewModelTests {
 
         #expect(viewModel.hasWon)
         #expect(viewModel.showsStatusOverlay)
-        #expect(viewModel.statusTitle == "进化完成")
+        #expect(viewModel.statusTitle == "Evolution Complete")
     }
 
     @Test
@@ -198,7 +267,7 @@ struct GameViewModelTests {
         #expect(continued)
         #expect(viewModel.hasWon)
         #expect(!viewModel.showsStatusOverlay)
-        #expect(viewModel.statusText == "继续挑战")
+        #expect(viewModel.statusText == "Keep Going")
         #expect(viewModel.board != game.cells)
     }
 
@@ -293,6 +362,38 @@ struct GameViewModelTests {
         #expect(activated)
         #expect(viewModel.isChoosingReviveTile)
         #expect(!viewModel.showsStatusOverlay)
+    }
+
+    @Test
+    func requestReviveModeRequiresRewardedAdAfterGameOver() {
+        let game = GameBoard(cells: [
+            [2, 4, 2, 4],
+            [4, 2, 4, 2],
+            [2, 4, 2, 4],
+            [4, 2, 4, 2]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults())
+
+        let result = viewModel.requestReviveMode()
+
+        #expect(result == .requiresAd(.revive))
+        #expect(!viewModel.isChoosingReviveTile)
+    }
+
+    @Test
+    func rewardedReviveActivatesTileSelection() {
+        let game = GameBoard(cells: [
+            [2, 4, 2, 4],
+            [4, 2, 4, 2],
+            [2, 4, 2, 4],
+            [4, 2, 4, 2]
+        ])
+        let viewModel = GameViewModel(game: game, defaults: makeDefaults())
+
+        let activated = viewModel.performRewardedRevive()
+
+        #expect(activated)
+        #expect(viewModel.isChoosingReviveTile)
     }
 
     @Test
@@ -450,6 +551,28 @@ struct GameViewModelTests {
         viewModel.move(direction: .right)
 
         #expect(recorder.effects == [.move])
+    }
+
+    @Test
+    func skipsSoundWhenSettingIsDisabled() {
+        let recorder = SoundRecorder()
+        let game = GameBoard(cells: [
+            [2, 2, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ])
+        let viewModel = GameViewModel(
+            game: game,
+            defaults: makeDefaults(),
+            feedback: GameFeedback(record: { _ in }),
+            soundPlayer: recorder.soundPlayer
+        )
+
+        viewModel.setSoundEnabled(false)
+        viewModel.move(direction: .left)
+
+        #expect(recorder.effects.isEmpty)
     }
 
     @Test
